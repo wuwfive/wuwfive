@@ -1,0 +1,76 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <strings.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define PORT 1234
+#define BACKLOG 5
+#define BUFSIZE 1024
+
+int main(int argc, char** argv){
+  // char buf[BUFSIZE];
+
+  int sockfd=socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfd==-1){
+    printf("socket creation error\n");
+    exit(1);
+  }
+
+  struct sockaddr_in srvaddr;
+  bzero(&srvaddr,sizeof(srvaddr));
+  srvaddr.sin_family=AF_INET;
+  srvaddr.sin_port=htons(PORT);
+  srvaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+  
+
+  if(bind(sockfd, (struct sockaddr *)&srvaddr, sizeof(srvaddr))==-1){
+    printf("bind error\n");
+    close(sockfd);
+    exit(1);
+  }
+
+  if(listen(sockfd, BACKLOG)==-1){
+    printf("listen error\n");
+    close(sockfd);
+    exit(1);
+  }
+
+  struct sockaddr_in clientaddr;
+  int addr_size;
+
+  while(1){
+    bzero(&clientaddr,sizeof(clientaddr));
+
+    int newfd=accept(sockfd,(struct sockaddr *)&clientaddr, &addr_size);
+    if(newfd==-1){
+      printf("accept error\n");
+      continue;
+    }
+
+    //printf("received from client: %s, %d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+
+    int id=fork();
+    if(id<0){
+      fprintf(stderr, "process creation error\n");
+      continue;
+    } else if(id==0){
+      close(sockfd);
+      
+      char buf[BUFSIZE];
+      int nbytes=read(newfd,  buf, sizeof(buf));
+      buf[nbytes]='\0';
+      printf("received data from client: %s\n",buf);
+
+      bzero(buf,sizeof(buf));
+      sprintf(buf,"Welcome!");
+      write(newfd, buf, strlen(buf));
+	  close(newfd);
+    } else {
+      close(newfd);
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,49 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <strings.h>
+#include <string.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+
+
+#define BUFSIZE 1024
+
+int main(int argc, char** argv){
+  char buf[BUFSIZE];
+
+  int PORT=1234;
+
+  int sockfd=socket(AF_INET, SOCK_STREAM, 0);
+  if(sockfd==-1){
+    printf("socket creation error\n");
+    exit(1);
+  }
+
+  struct sockaddr_in srvaddr;
+  bzero(&srvaddr, sizeof(srvaddr));
+  srvaddr.sin_family=AF_INET;
+  srvaddr.sin_port=htons(PORT);
+  inet_aton("127.0.0.1",&srvaddr.sin_addr);
+
+  if(connect(sockfd, (struct sockaddr *)&srvaddr, sizeof(srvaddr))==-1){
+    printf("fail to connect\n");
+    close(sockfd);
+    exit(1);
+  }
+
+  bzero(buf,sizeof(buf));
+  sprintf(buf,"Hello world!");
+  write(sockfd, buf, strlen(buf));
+
+  bzero(buf,sizeof(buf));
+  int nbytes=read(sockfd, buf, sizeof(buf));
+  //int nbytes=recv(sockfd, buf, sizeof(buf),0);
+  buf[nbytes]='\0';
+  printf("received from server: %s\n", buf);
+
+  close(sockfd);
+
+  return 0;
+}
